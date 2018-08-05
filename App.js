@@ -5,6 +5,7 @@
  */
 
 import React, {Component} from 'react';
+import MapView from 'react-native-maps';
 import {
   Platform, 
   StyleSheet, 
@@ -54,35 +55,49 @@ export default class App extends Component {
   render = () => {
     return (
       <View style={styles.container}>
-        {this.state.photos && 
-          <ScrollView
-          contentContainerStyle={styles.scrollView}>
-          {
-            this.state.photos.map((p, i) => {
-              return (
-                <TouchableHighlight
-                  style={{opacity: i === this.state.index ? 0.5 : 1}}
-                  key={i}
-                  underlayColor='transparent'
-                  onPress={() => this.setIndex(i)}
-                >
-                  <Image
-                    style={{
-                      width: width/3,
-                      height: width/3
-                    }}
-                    source={{uri: p.node.image.uri}}
-                  />
-                </TouchableHighlight>
-              )
-            })
+        <View style={styles.imageContainer}>
+          {this.state.photos && 
+            <ScrollView
+            contentContainerStyle={styles.scrollView}>
+            {
+              this.state.photos.map((p, i) => {
+                return (
+                  <TouchableHighlight
+                    style={{opacity: i === this.state.index ? 0.5 : 1}}
+                    key={i}
+                    underlayColor='transparent'
+                    onPress={() => this.setIndex(i)}
+                  >
+                    <Image
+                      style={{
+                        width: width / 3,
+                        height: width / 3,
+                      }}
+                      source={{uri: p.node.image.uri}}
+                    />
+                  </TouchableHighlight>
+                )
+              })
+            }
+          </ScrollView>
           }
-        </ScrollView>
-        }
 
-        {!this.state.photos && 
-          <Text style={styles.welcome}>I didn't find photos!</Text>
-        }
+          {!this.state.photos && 
+            <Text style={styles.welcome}>I didn't find photos!</Text>
+          }
+        </View>
+
+        <View style={styles.mapContainer}>
+          <MapView
+            style={styles.map}
+            initialRegion={{
+              latitude: 37.78825,
+              longitude: -122.4324,
+              latitudeDelta: 0.0922,
+              longitudeDelta: 0.0421,
+            }}
+          />
+        </View>
       </View>
     );
   }
@@ -91,14 +106,25 @@ export default class App extends Component {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    flexDirection: 'row',
-    marginTop: 40,
-    // justifyContent: 'center',
-    // alignItems: 'center',
+    flexDirection: 'column',
+    marginTop: 25,
     backgroundColor: '#F5FCFF',
+  },
+  imageContainer: {
+    flex: 0.4,
   },
   scrollView: {
     flexWrap: 'wrap',
-    flexDirection: 'row'
+    flexDirection: 'row',
   },
+  mapContainer: {
+    flex: 0.6, 
+    flexDirection: 'column', 
+    borderColor: '#ccc',
+    borderWidth: 2,
+    alignSelf: 'stretch',
+  },
+  map: {
+    ...StyleSheet.absoluteFillObject,
+  }
 });
