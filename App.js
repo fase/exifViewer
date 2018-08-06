@@ -5,7 +5,7 @@
  */
 
 import React, {Component} from 'react';
-import MapView from 'react-native-maps';
+import MapView, {Marker} from 'react-native-maps';
 import {
   Platform, 
   StyleSheet, 
@@ -17,6 +17,7 @@ import {
   ScrollView,
   Dimensions,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 
 const { width } = Dimensions.get('window');
@@ -25,31 +26,95 @@ export default class App extends Component {
   constructor(props) {
     super(props);
 
-    this.state = { photos: undefined };
+    this.map = React.createRef();
+
+    this.state = {
+      photos: [],
+      isLoading: false,
+      region: {
+        latitude: 37.78825, // San Francisco (default view)
+        longitude: -122.4324,
+        latitudeDelta: 0.5, // 0.0922,
+        longitudeDelta: 0.5, //0.0421,
+      },
+    };
   }
 
   getPhotos = () => {
+    this.setState({isLoading: true});
+
     CameraRoll.getPhotos({
-      first: 20,
-      assetType: 'All'
+      first: this.state.photos.length + 21,
     })
-    .then(r => this.setState({ photos: r.edges }))
+    .then(r => {
+      this.setState({ photos: r.edges });
+      this.setState({isLoading: false});
+    })
     .catch((err) => {
       //Error Loading Images
       console.log(err);
    });
   }
 
-  componentDidMount = () => 
-  {
+  componentDidMount = () => {
     this.getPhotos();
   }
 
   setIndex = (index) =>
   {
     let picked = this.state.photos[index];
+    let isValidLocation = true;
 
-    Alert.alert('Photo Selected', `Lng: ${picked.node.location.longitude} Lat: ${picked.node.location.latitude}`);
+    if(!picked) {
+      this.showAlert({
+        title: 'Photo Not Selected',
+        message: 'No photo was selected.' 
+      });
+
+      isValidLocation = false;
+    }
+
+    if(!picked.node.location.longitude || !picked.node.location.latitude) {
+      this.showAlert({
+        title: 'No Location Data Found',
+        message: 'No location information exists on the selected photo.' 
+      });
+
+      isValidLocation = false;
+    }
+
+    if(isValidLocation)
+    {
+      let region = {
+        longitude: picked.node.location.longitude,
+        latitude: picked.node.location.latitude,
+        latitudeDelta: 0.0922,
+        longitudeDelta: 0.0421,
+      };
+
+      this.setState({ region: region });
+      this.map.current.animateToRegion(region, 2000);
+    }
+  }
+
+  showAlert = (data) => {
+    Alert.alert(data.title, data.message,
+      [
+        {text: 'OK', onPress: () => { 
+          console.log('OK Pressed');
+        }},
+      ],
+      { cancelable: false });
+  }
+
+  handleScrollSizeChange = (width, height) => {
+    let x = '';
+  }
+
+  handleScrollMomentumEnd = () => {
+    if (!this.state.isLoading) {
+      this.getPhotos();
+    }
   }
 
   render = () => {
@@ -57,8 +122,11 @@ export default class App extends Component {
       <View style={styles.container}>
         <View style={styles.imageContainer}>
           {this.state.photos && 
-            <ScrollView
-            contentContainerStyle={styles.scrollView}>
+            <ScrollView 
+              contentContainerStyle={styles.scrollView} 
+              onContentSizeChange={this.handleScrollSizeChange}
+              onMomentumScrollEnd={this.handleScrollMomentumEnd}
+            >
             {
               this.state.photos.map((p, i) => {
                 return (
@@ -68,35 +136,42 @@ export default class App extends Component {
                     underlayColor='transparent'
                     onPress={() => this.setIndex(i)}
                   >
-                    <Image
-                      style={{
-                        width: width / 3,
-                        height: width / 3,
-                      }}
+                    <Image 
+                      style={styles.scrollViewImage} 
                       source={{uri: p.node.image.uri}}
                     />
                   </TouchableHighlight>
                 )
               })
             }
-          </ScrollView>
+            </ScrollView>
           }
 
           {!this.state.photos && 
             <Text style={styles.welcome}>I didn't find photos!</Text>
           }
+
+        {this.state.isLoading && 
+          <View style={styles.loading}>
+            <ActivityIndicator size="large" color="#fff" />
+          </View>
+        }
+
         </View>
 
         <View style={styles.mapContainer}>
           <MapView
+            ref={this.map} 
             style={styles.map}
-            initialRegion={{
-              latitude: 37.78825,
-              longitude: -122.4324,
-              latitudeDelta: 0.0922,
-              longitudeDelta: 0.0421,
-            }}
-          />
+            initialRegion={this.state.region}
+          >
+              <Marker
+                coordinate={{
+                  latitude: this.state.region.latitude, 
+                  longitude: this.state.region.longitude
+                }}
+              />
+          </MapView>
         </View>
       </View>
     );
@@ -107,18 +182,22 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     flexDirection: 'column',
-    marginTop: 25,
+    marginTop: 35,
     backgroundColor: '#F5FCFF',
   },
   imageContainer: {
-    flex: 0.4,
+    flex: 0.5,
   },
   scrollView: {
     flexWrap: 'wrap',
     flexDirection: 'row',
   },
+  scrollViewImage: {
+    width: width / 3,
+    height: width / 3,
+  },
   mapContainer: {
-    flex: 0.6, 
+    flex: 0.5, 
     flexDirection: 'column', 
     borderColor: '#ccc',
     borderWidth: 2,
@@ -126,5 +205,13 @@ const styles = StyleSheet.create({
   },
   map: {
     ...StyleSheet.absoluteFillObject,
+  },
+  loading: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
   }
 });
