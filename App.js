@@ -18,6 +18,7 @@ import {
   Dimensions,
   Alert,
   ActivityIndicator,
+  AppState,
 } from 'react-native';
 
 const { width } = Dimensions.get('window');
@@ -31,6 +32,7 @@ export default class App extends Component {
     this.state = {
       photos: [],
       isLoading: false,
+      appState: AppState.currentState,
       region: {
         latitude: 37.78825, // San Francisco (default view)
         longitude: -122.4324,
@@ -58,6 +60,20 @@ export default class App extends Component {
 
   componentDidMount = () => {
     this.getPhotos();
+    AppState.addEventListener('change', this.handleAppStateChange);
+  }
+
+  componentWillUnmount = () => {
+    AppState.removeEventListener('change', this.handleAppStateChange);
+  }
+
+  handleAppStateChange = (nextAppState) => {
+    if (this.state.appState.match(/inactive|background/) && nextAppState === 'active') {
+      this.setState({photos: []});
+      this.getPhotos();
+    }
+
+    this.setState({appState: nextAppState});
   }
 
   setIndex = (index) =>
@@ -107,10 +123,6 @@ export default class App extends Component {
       { cancelable: false });
   }
 
-  handleScrollSizeChange = (width, height) => {
-    let x = '';
-  }
-
   handleScrollMomentumEnd = () => {
     if (!this.state.isLoading) {
       this.getPhotos();
@@ -124,7 +136,6 @@ export default class App extends Component {
           {this.state.photos && 
             <ScrollView 
               contentContainerStyle={styles.scrollView} 
-              onContentSizeChange={this.handleScrollSizeChange}
               onMomentumScrollEnd={this.handleScrollMomentumEnd}
             >
             {
