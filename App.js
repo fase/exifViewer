@@ -9,25 +9,17 @@ import MapView, {Marker} from 'react-native-maps';
 import {
   Platform, 
   StyleSheet, 
-  Text, 
   View, 
-  CameraRoll, 
-  Image, 
-  TouchableHighlight, 
-  ScrollView,
-  Dimensions,
   Alert,
-  ActivityIndicator,
   AppState,
+  CameraRoll,
 } from 'react-native';
-
-const { width } = Dimensions.get('window');
+import PhotoList from './components/photoList';
+import Map from './components/map';
 
 export default class App extends Component {
   constructor(props) {
     super(props);
-
-    this.map = React.createRef();
 
     this.state = {
       photos: [],
@@ -109,7 +101,6 @@ export default class App extends Component {
       };
 
       this.setState({ region: region });
-      this.map.current.animateToRegion(region, 2000);
     }
   }
 
@@ -123,67 +114,18 @@ export default class App extends Component {
       { cancelable: false });
   }
 
-  handleScrollMomentumEnd = () => {
-    if (!this.state.isLoading) {
-      this.getPhotos();
-    }
-  }
-
   render = () => {
     return (
       <View style={styles.container}>
-        <View style={styles.imageContainer}>
-          {this.state.photos && 
-            <ScrollView 
-              contentContainerStyle={styles.scrollView} 
-              onMomentumScrollEnd={this.handleScrollMomentumEnd}
-            >
-            {
-              this.state.photos.map((p, i) => {
-                return (
-                  <TouchableHighlight
-                    style={{opacity: i === this.state.index ? 0.5 : 1}}
-                    key={i}
-                    underlayColor='transparent'
-                    onPress={() => this.setIndex(i)}
-                  >
-                    <Image 
-                      style={styles.scrollViewImage} 
-                      source={{uri: p.node.image.uri}}
-                    />
-                  </TouchableHighlight>
-                )
-              })
-            }
-            </ScrollView>
-          }
+        <PhotoList 
+          isLoading={this.state.isLoading} 
+          photos={this.state.photos} 
+          index={this.state.index} 
+          getPhotos={this.getPhotos} 
+          setIndex={this.setIndex}
+        />
 
-          {!this.state.photos && 
-            <Text style={styles.welcome}>I didn't find photos!</Text>
-          }
-
-        {this.state.isLoading && 
-          <View style={styles.loading}>
-            <ActivityIndicator size="large" color="#fff" />
-          </View>
-        }
-
-        </View>
-
-        <View style={styles.mapContainer}>
-          <MapView
-            ref={this.map} 
-            style={styles.map}
-            initialRegion={this.state.region}
-          >
-              <Marker
-                coordinate={{
-                  latitude: this.state.region.latitude, 
-                  longitude: this.state.region.longitude
-                }}
-              />
-          </MapView>
-        </View>
+        <Map region={this.state.region} />
       </View>
     );
   }
@@ -196,33 +138,4 @@ const styles = StyleSheet.create({
     marginTop: 35,
     backgroundColor: '#F5FCFF',
   },
-  imageContainer: {
-    flex: 0.5,
-  },
-  scrollView: {
-    flexWrap: 'wrap',
-    flexDirection: 'row',
-  },
-  scrollViewImage: {
-    width: width / 3,
-    height: width / 3,
-  },
-  mapContainer: {
-    flex: 0.5, 
-    flexDirection: 'column', 
-    borderColor: '#ccc',
-    borderWidth: 2,
-    alignSelf: 'stretch',
-  },
-  map: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  loading: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
-  }
 });
